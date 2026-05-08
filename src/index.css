@@ -1,0 +1,38 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --copa-teal: #009eb3;
+  --copa-dark: #006878;
+  --copa-gold: #f0c040;
+  --copa-red: #b90c31;
+  --bg-dark: #03313a;
+  --bg-mid: #054858;
+  --text-light: #e8f4f6;
+  --text-muted: #8ab8c0;
+  --card-max: 420px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-dark);
+}
+
+body {
+  font-family: 'Barlow Condensed', sans-serif;
+  color: var(--text-light);
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 20% 20%, #054d5a 0%, #03313a 60%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: var(--copa-teal); border-radius: 3px; }
