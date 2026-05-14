@@ -26,7 +26,7 @@ body {
   font-family: 'Barlow Condensed', sans-serif;
   color: var(--text-light);
   min-height: 100vh;
-  background: 'linear-gradient(90deg, rgba(83, 155, 42, 1) 0%, rgba(0, 161, 67, 1) 100%, rgba(237, 221, 83, 1) 100%)',
+  background: #539b2a,
 }
 
 #root {
