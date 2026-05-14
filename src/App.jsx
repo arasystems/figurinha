@@ -546,7 +546,7 @@ const styles = {
 
   // Upload zone
   uploadZone: {
-    border: '2px dashed rgba(0, 0, 0, 0)',
+    border: '2px dashed rgba(255, 255, 255, 1)',
     borderRadius: 12,
     padding: '28px 20px',
     textAlign: 'center',
