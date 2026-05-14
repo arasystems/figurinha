@@ -420,7 +420,7 @@ const styles = {
 
   // Header
   header: {
-    background: 'linear-gradient(90deg, #006878 0%, #009eb3 100%)',
+    background: 'linear-gradientlinear-gradient(90deg,rgba(42, 123, 155, 1) 0%, rgba(0, 161, 67, 1) 100%, rgba(237, 221, 83, 1) 100%);',
     borderBottom: '3px solid #f0c040',
     padding: '16px 24px',
   },
