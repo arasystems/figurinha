@@ -416,7 +416,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     fontFamily: "'Barlow Condensed', sans-serif",
-    background: #539b2a,
+    background: '#539b2a',
   },
 
   // Header
