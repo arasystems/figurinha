@@ -251,7 +251,7 @@ export default function App() {
           <div style={styles.headerEmoji}>⚽</div>
           <div>
             <h1 style={styles.title}>FIGURINHA DA COPA</h1>
-            <p style={styles.subtitle}>Qatar 2022 · Crie a sua cartinha personalizada</p>
+            <p style={styles.subtitle}>FIFA 2026 · Crie a sua figurinha personalizada</p>
           </div>
         </div>
       </header>
