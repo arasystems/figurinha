@@ -86,8 +86,8 @@ export default function App() {
     canvas.width  = cw
     canvas.height = ch
 
-    // Background
-    ctx.fillStyle = '#1533CC'
+    // Background — cor da área da foto (verde-limão da arte)
+    ctx.fillStyle = '#B1F222'
     ctx.fillRect(0, 0, cw, ch)
 
     // ── Draw user photo ────────────────────────────────────────────────────
