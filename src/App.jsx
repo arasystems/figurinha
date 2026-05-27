@@ -1,43 +1,40 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { removeBackground } from '@imgly/background-removal'
 
-// ─── Template coordinate constants (base image: 460×597) ────────────────────
-const BASE_W = 460
-const BASE_H = 597
+// ─── Template coordinate constants (base image: 1080×1397) ──────────────────
+const BASE_W = 1080
+const BASE_H = 1397
 
-// Silhouette darkness threshold
-const DARK_THRESHOLD = 55
+// Photo placement region (the lime-green area inside the orange frame)
+const PHOTO_REGION = { x: 65, y: 92, w: 938, h: 1088 }
 
-// Photo placement region (the body silhouette area)
-const PHOTO_REGION = { x: 48, y: 38, w: 367, h: 442 }
+// Name banner (green rounded rectangle at bottom)
+const NAME_BANNER = { x: 151, y: 1193, w: 777, h: 97 }
 
-// Text banner regions
-const NAME_BANNER  = { x: 88,  y: 480, w: 322, h: 36  }
-const DATE_BANNER  = { x: 155, y: 520, w: 160, h: 35  }
-
-// Banner colors (sampled from template)
-const NAME_BG = '#B90C31'
-const DATE_BG = '#8A0826'
+// Banner color (same green as the banner background)
+const NAME_BG = '#04C248'
 
 // ─── App ────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [photoImg,    setPhotoImg]    = useState(null)
-  const [playerName,  setPlayerName]  = useState('')
-  const [playerDate,  setPlayerDate]  = useState('')
-  const [offsetX,     setOffsetX]     = useState(0)
-  const [offsetY,     setOffsetY]     = useState(0)
-  const [zoom,        setZoom]        = useState(1.0)
-  const [processed,   setProcessed]   = useState(null)
+  const [photoImg,      setPhotoImg]      = useState(null)
+  const [playerName,    setPlayerName]    = useState('')
+  const [playerDate,    setPlayerDate]    = useState('')
+  const [offsetX,       setOffsetX]       = useState(0)
+  const [offsetY,       setOffsetY]       = useState(0)
+  const [zoom,          setZoom]          = useState(1.0)
+  const [processed,     setProcessed]     = useState(null)
   const [templateReady, setTemplateReady] = useState(false)
-  const [dragging,    setDragging]    = useState(false)
-  const [lastPos,     setLastPos]     = useState({ x: 0, y: 0 })
-  const [isDragOver,  setIsDragOver]  = useState(false)
-  const [removing,    setRemoving]    = useState(false) // background removal in progress
+  const [dragging,      setDragging]      = useState(false)
+  const [lastPos,       setLastPos]       = useState({ x: 0, y: 0 })
+  const [isDragOver,    setIsDragOver]    = useState(false)
+  const [removing,      setRemoving]      = useState(false)
 
-  const canvasRef   = useRef(null)
+  const canvasRef    = useRef(null)
   const fileInputRef = useRef(null)
 
   // ── Process template on mount ─────────────────────────────────────────────
+  // This art uses a LIME GREEN area for the photo zone.
+  // We make lime-green pixels transparent so the photo shows through underneath.
   useEffect(() => {
     const img = new Image()
     img.src = '/arte_copa.PNG'
@@ -51,11 +48,12 @@ export default function App() {
       const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height)
       const data = imageData.data
 
-      // Make silhouette pixels transparent
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i + 1], b = data[i + 2]
-        if (r < DARK_THRESHOLD && g < DARK_THRESHOLD && b < DARK_THRESHOLD) {
-          data[i + 3] = 0
+        // Detect lime green (photo zone): high green, lower red, very low blue
+        const isLimeGreen = r > 130 && r < 220 && g > 210 && b < 100
+        if (isLimeGreen) {
+          data[i + 3] = 0 // make transparent → photo will show through
         }
       }
 
@@ -65,12 +63,15 @@ export default function App() {
     }
   }, [])
 
-  // ── Scale helper (base coords → actual canvas coords) ────────────────────
-  const scale = useCallback((val, isY = false) => {
+  // ── Scale helpers ─────────────────────────────────────────────────────────
+  const scaleX = useCallback((val) => {
     if (!processed) return val
-    return isY
-      ? val * (processed.height / BASE_H)
-      : val * (processed.width  / BASE_W)
+    return val * (processed.width / BASE_W)
+  }, [processed])
+
+  const scaleY = useCallback((val) => {
+    if (!processed) return val
+    return val * (processed.height / BASE_H)
   }, [processed])
 
   // ── Canvas render ─────────────────────────────────────────────────────────
@@ -85,21 +86,17 @@ export default function App() {
     canvas.width  = cw
     canvas.height = ch
 
-    // Background gradient (matches template edges)
-    const grad = ctx.createLinearGradient(0, 0, cw, ch)
-    grad.addColorStop(0,   '#00a5bb')
-    grad.addColorStop(0.5, '#0097aa')
-    grad.addColorStop(1,   '#007d8f')
-    ctx.fillStyle = grad
+    // Background
+    ctx.fillStyle = '#1533CC'
     ctx.fillRect(0, 0, cw, ch)
 
     // ── Draw user photo ────────────────────────────────────────────────────
     if (photoImg) {
       const pr = {
-        x: scale(PHOTO_REGION.x),
-        y: scale(PHOTO_REGION.y, true),
-        w: scale(PHOTO_REGION.w),
-        h: scale(PHOTO_REGION.h, true),
+        x: scaleX(PHOTO_REGION.x),
+        y: scaleY(PHOTO_REGION.y),
+        w: scaleX(PHOTO_REGION.w),
+        h: scaleY(PHOTO_REGION.h),
       }
 
       const aspect = photoImg.naturalWidth / photoImg.naturalHeight
@@ -113,8 +110,8 @@ export default function App() {
       dw *= zoom
       dh *= zoom
 
-      const dx = pr.x + (pr.w - dw) / 2 + scale(offsetX)
-      const dy = pr.y + (pr.h - dh) / 2 + scale(offsetY, true)
+      const dx = pr.x + (pr.w - dw) / 2 + scaleX(offsetX)
+      const dy = pr.y + (pr.h - dh) / 2 + scaleY(offsetY)
 
       ctx.drawImage(photoImg, dx, dy, dw, dh)
     }
@@ -122,59 +119,60 @@ export default function App() {
     // ── Draw processed template on top ─────────────────────────────────────
     ctx.drawImage(processed, 0, 0)
 
-    // ── Name banner ────────────────────────────────────────────────────────
-    const nb = {
-      x: scale(NAME_BANNER.x),
-      y: scale(NAME_BANNER.y, true),
-      w: scale(NAME_BANNER.w),
-      h: scale(NAME_BANNER.h, true),
-    }
-
+    // ── Name banner text ───────────────────────────────────────────────────
     if (playerName.trim()) {
-      ctx.fillStyle = NAME_BG
-      ctx.fillRect(nb.x, nb.y, nb.w, nb.h)
+      const nb = {
+        x: scaleX(NAME_BANNER.x),
+        y: scaleY(NAME_BANNER.y),
+        w: scaleX(NAME_BANNER.w),
+        h: scaleY(NAME_BANNER.h),
+      }
 
-      const fs = Math.max(10, Math.round(nb.h * 0.72))
+      // Cover placeholder with banner color
+      ctx.fillStyle = NAME_BG
+      ctx.beginPath()
+      const r = nb.h * 0.4
+      ctx.roundRect(nb.x, nb.y, nb.w, nb.h, r)
+      ctx.fill()
+
+      // Draw name text
+      const fs = Math.max(10, Math.round(nb.h * 0.55))
       ctx.font         = `bold ${fs}px Impact, "Arial Black", sans-serif`
       ctx.fillStyle    = '#FFFFFF'
       ctx.textAlign    = 'center'
       ctx.textBaseline = 'middle'
 
-      // Shrink text if too wide
+      // Shrink if too wide
       let text = playerName.toUpperCase()
-      ctx.font = `bold ${fs}px Impact, "Arial Black", sans-serif`
-      while (ctx.measureText(text).width > nb.w * 0.92 && fs > 8) {
-        ctx.font = `bold ${fs * 0.9}px Impact, "Arial Black", sans-serif`
+      while (ctx.measureText(text).width > nb.w * 0.9) {
+        const currentSize = parseInt(ctx.font)
+        ctx.font = `bold ${currentSize - 1}px Impact, "Arial Black", sans-serif`
+        if (currentSize <= 8) break
       }
-
       ctx.fillText(text, nb.x + nb.w / 2, nb.y + nb.h / 2)
     }
 
-    // ── Date banner ────────────────────────────────────────────────────────
-    const db = {
-      x: scale(DATE_BANNER.x),
-      y: scale(DATE_BANNER.y, true),
-      w: scale(DATE_BANNER.w),
-      h: scale(DATE_BANNER.h, true),
-    }
-
-    if (playerDate.trim()) {
-      ctx.fillStyle = DATE_BG
-      ctx.fillRect(db.x, db.y, db.w, db.h)
-
-      const fs2 = Math.max(8, Math.round(db.h * 0.58))
-      ctx.font         = `bold ${fs2}px Impact, "Arial Black", sans-serif`
-      ctx.fillStyle    = '#FFFFFF'
+    // ── Date text (shown below name inside banner) ─────────────────────────
+    if (playerDate.trim() && playerName.trim()) {
+      const nb = {
+        x: scaleX(NAME_BANNER.x),
+        y: scaleY(NAME_BANNER.y),
+        w: scaleX(NAME_BANNER.w),
+        h: scaleY(NAME_BANNER.h),
+      }
+      const fs2 = Math.max(8, Math.round(nb.h * 0.28))
+      ctx.font         = `${fs2}px Impact, "Arial Black", sans-serif`
+      ctx.fillStyle    = 'rgba(255,255,255,0.75)'
       ctx.textAlign    = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(playerDate.toUpperCase(), db.x + db.w / 2, db.y + db.h / 2)
+      ctx.fillText(playerDate.toUpperCase(), nb.x + nb.w / 2, nb.y + nb.h * 0.78)
     }
-  }, [processed, photoImg, offsetX, offsetY, zoom, playerName, playerDate, scale])
+
+  }, [processed, photoImg, offsetX, offsetY, zoom, playerName, playerDate, scaleX, scaleY])
 
   useEffect(() => { render() }, [render])
 
-  // ── Upload handler ────────────────────────────────────────────────────────
-  // Background removal + load image
+  // ── Background removal + upload ───────────────────────────────────────────
   const loadImageFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return
 
@@ -242,21 +240,22 @@ export default function App() {
     a.click()
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={styles.root}>
-      {/* ── Header ────────────────────────────────────────────────── */}
+
+      {/* Header */}
       <header style={styles.header}>
         <div style={styles.headerInner}>
           <div style={styles.headerEmoji}>⚽</div>
           <div>
             <h1 style={styles.title}>FIGURINHA DA COPA</h1>
-            <p style={styles.subtitle}>FIFA 2026 · Crie a sua figurinha personalizada</p>
+            <p style={styles.subtitle}>Copa do Mundo 2026 · Crie a sua cartinha personalizada</p>
           </div>
         </div>
       </header>
 
-      {/* ── Main layout ───────────────────────────────────────────── */}
+      {/* Main */}
       <main style={styles.main}>
 
         {/* Card preview */}
@@ -283,12 +282,10 @@ export default function App() {
                 <span>Carregando template…</span>
               </div>
             )}
-            <canvas
-              ref={canvasRef}
-              style={styles.canvas}
-            />
+            <canvas ref={canvasRef} style={styles.canvas} />
           </div>
-          {/* Zoom slider under card */}
+
+          {/* Zoom slider */}
           {photoImg && (
             <div style={styles.zoomRow}>
               <span style={styles.zoomLabel}>🔍</span>
@@ -310,8 +307,8 @@ export default function App() {
           <div
             style={{
               ...styles.uploadZone,
-              ...(isDragOver ? styles.uploadZoneActive : {}),
-              ...(photoImg   ? styles.uploadZoneDone   : {}),
+              ...(isDragOver ? styles.uploadZoneActive  : {}),
+              ...(photoImg   ? styles.uploadZoneDone    : {}),
               ...(removing   ? styles.uploadZoneLoading : {}),
             }}
             onClick={() => !removing && fileInputRef.current?.click()}
@@ -355,7 +352,7 @@ export default function App() {
             <div style={styles.dividerLine} />
           </div>
 
-          {/* Name input */}
+          {/* Name */}
           <div style={styles.fieldGroup}>
             <label style={styles.fieldLabel}>🏷️ NOME DO JOGADOR</label>
             <input
@@ -368,7 +365,7 @@ export default function App() {
             />
           </div>
 
-          {/* Date input */}
+          {/* Date */}
           <div style={styles.fieldGroup}>
             <label style={styles.fieldLabel}>📅 DATA / POSIÇÃO / CLUBE</label>
             <input
@@ -381,14 +378,13 @@ export default function App() {
             />
           </div>
 
-          {/* Photo adjustment hint */}
           {photoImg && (
             <div style={styles.hintBox}>
               <strong>💡 Dica:</strong> Arraste a foto no cartão para ajustar a posição. Use o controle de zoom abaixo do cartão.
             </div>
           )}
 
-          {/* Download button */}
+          {/* Download */}
           <button
             onClick={handleDownload}
             disabled={!templateReady}
@@ -409,19 +405,16 @@ export default function App() {
   )
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = {
   root: {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
     fontFamily: "'Barlow Condensed', sans-serif",
-    background: '#539b2a',
   },
-
-  // Header
   header: {
-    background: 'linear-gradient(90deg, rgba(83, 155, 42, 1) 0%, rgba(0, 161, 67, 1) 100%, rgba(237, 221, 83, 1) 100%)',
+    background: 'linear-gradient(90deg, #006878 0%, #009eb3 100%)',
     borderBottom: '3px solid #f0c040',
     padding: '16px 24px',
   },
@@ -432,10 +425,7 @@ const styles = {
     alignItems: 'center',
     gap: 16,
   },
-  headerEmoji: {
-    fontSize: 40,
-    lineHeight: 1,
-  },
+  headerEmoji: { fontSize: 40, lineHeight: 1 },
   title: {
     fontFamily: "'Russo One', sans-serif",
     fontSize: '2rem',
@@ -449,8 +439,6 @@ const styles = {
     letterSpacing: '0.05em',
     marginTop: 2,
   },
-
-  // Main layout
   main: {
     flex: 1,
     maxWidth: 1100,
@@ -463,8 +451,6 @@ const styles = {
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
-
-  // Preview section
   previewSection: {
     display: 'flex',
     flexDirection: 'column',
@@ -513,8 +499,6 @@ const styles = {
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
-
-  // Zoom row
   zoomRow: {
     display: 'flex',
     alignItems: 'center',
@@ -533,8 +517,6 @@ const styles = {
     accentColor: '#009eb3',
     cursor: 'pointer',
   },
-
-  // Controls panel
   controls: {
     flex: '1 1 320px',
     maxWidth: 420,
@@ -543,10 +525,8 @@ const styles = {
     gap: 20,
     minWidth: 280,
   },
-
-  // Upload zone
   uploadZone: {
-    border: '2px dashed rgba(255, 255, 255, 1)',
+    border: '2px dashed rgba(0,180,210,0.4)',
     borderRadius: 12,
     padding: '28px 20px',
     textAlign: 'center',
@@ -563,10 +543,12 @@ const styles = {
     border: '2px solid rgba(100,200,100,0.5)',
     background: 'rgba(50,180,80,0.05)',
   },
-  uploadIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+  uploadZoneLoading: {
+    border: '2px dashed rgba(240,192,64,0.5)',
+    background: 'rgba(240,192,64,0.05)',
+    cursor: 'not-allowed',
   },
+  uploadIcon: { fontSize: 36, marginBottom: 8 },
   uploadTitle: {
     fontSize: '1.1rem',
     fontWeight: 700,
@@ -578,8 +560,22 @@ const styles = {
     color: '#8ab8c0',
     marginTop: 4,
   },
-
-  // Divider
+  progressBar: {
+    marginTop: 12,
+    height: 4,
+    background: 'rgba(255,255,255,0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    width: '80%',
+    margin: '12px auto 0',
+  },
+  progressFill: {
+    height: '100%',
+    width: '40%',
+    background: '#f0c040',
+    borderRadius: 2,
+    animation: 'slide 1.2s ease-in-out infinite',
+  },
   divider: {
     display: 'flex',
     alignItems: 'center',
@@ -595,8 +591,6 @@ const styles = {
     letterSpacing: '0.15em',
     color: '#8ab8c0',
   },
-
-  // Inputs
   fieldGroup: {
     display: 'flex',
     flexDirection: 'column',
@@ -621,8 +615,6 @@ const styles = {
     outline: 'none',
     transition: 'border-color 0.2s',
   },
-
-  // Hint box
   hintBox: {
     background: 'rgba(0,120,140,0.15)',
     border: '1px solid rgba(0,180,210,0.2)',
@@ -632,8 +624,6 @@ const styles = {
     color: '#8ab8c0',
     lineHeight: 1.5,
   },
-
-  // Download button
   downloadBtn: {
     background: 'linear-gradient(135deg, #f0c040 0%, #e8a020 100%)',
     border: 'none',
@@ -650,32 +640,7 @@ const styles = {
   downloadBtnDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed',
-    transform: 'none',
   },
-
-  // Loading state
-  uploadZoneLoading: {
-    border: '2px dashed rgba(240,192,64,0.5)',
-    background: 'rgba(240,192,64,0.05)',
-    cursor: 'not-allowed',
-  },
-  progressBar: {
-    marginTop: 12,
-    height: 4,
-    background: 'rgba(255,255,255,0.1)',
-    borderRadius: 2,
-    overflow: 'hidden',
-    width: '80%',
-  },
-  progressFill: {
-    height: '100%',
-    width: '40%',
-    background: '#f0c040',
-    borderRadius: 2,
-    animation: 'slide 1.2s ease-in-out infinite',
-  },
-
-  // Footer note
   footerNote: {
     fontSize: '0.75rem',
     color: '#4a8090',
