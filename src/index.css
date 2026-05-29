@@ -12,7 +12,7 @@ body {
   font-family: 'Barlow Condensed', sans-serif;
   color: #e8f4f6;
   min-height: 100vh;
-  background: radial-gradient(ellipse at 20% 20%, #054d5a 0%, #03313a 60%);
+  background: #29EC72;
 }
 
 #root {
