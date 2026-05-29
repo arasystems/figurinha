@@ -220,7 +220,7 @@ export default function App() {
 
 const S = {
   root:        { minHeight:'100vh', display:'flex', flexDirection:'column', fontFamily:"'Barlow Condensed',sans-serif" },
-  header:      { background:'linear-gradient(90deg,#006878,#009eb3)', borderBottom:'3px solid #f0c040', padding:'16px 24px' },
+  header:      { background:'linear-gradient(#29EC72)', borderBottom:'3px solid #f0c040', padding:'16px 24px' },
   headerInner: { maxWidth:1100, margin:'0 auto', display:'flex', alignItems:'center', gap:16 },
   emoji:       { fontSize:40, lineHeight:1 },
   title:       { fontFamily:"'Russo One',sans-serif", fontSize:'2rem', letterSpacing:'0.08em', color:'#f0c040', lineHeight:1 },
