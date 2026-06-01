@@ -156,7 +156,7 @@ export default function App() {
           <span style={S.emoji}>⚽</span>
           <div>
             <h1 style={S.title}>FIGURINHA DA COPA</h1>
-            <p style={S.subtitle}>Copa do Mundo 2026 · Crie a sua cartinha personalizada</p>
+            <p style={S.subtitle}>Copa do Mundo 2026 · Crie a sua figurinha personalizada</p>
           </div>
         </div>
       </header>
